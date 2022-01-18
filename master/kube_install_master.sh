@@ -6,7 +6,7 @@ modprobe br_netfilter
 # allow K8s to manipulate iptables
 echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
 
-# exclude memory swap
+# exclude RAM swap
 # best practices to avoid false RAM stats
 swapoff -a
 
