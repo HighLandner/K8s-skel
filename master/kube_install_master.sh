@@ -22,11 +22,11 @@ echo \
 sudo apt-get update; sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
 # install kubectl via apt-get
-curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
-apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
-apt-get install -y kubeadm kubelet kubectl
-apt-mark hold kubeadm kubelet kubectl
-systemctl enable kubelet
+#curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+#apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+#apt-get install -y kubeadm kubelet kubectl
+#apt-mark hold kubeadm kubelet kubectl
+#systemctl enable kubelet
 
 # network cidr init
-kubeadm init --pod-network-cidr=10.244.0.0/16
+#kubeadm init --pod-network-cidr=10.244.0.0/16
