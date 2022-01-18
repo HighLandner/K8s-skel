@@ -11,7 +11,7 @@ echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
 swapoff -a
 
 # docker GPG keys
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor --yes -o /usr/share/keyrings/docker-archive-keyring.gpg
 
 # add docker repo
 echo \
