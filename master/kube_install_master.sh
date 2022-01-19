@@ -1,34 +1,40 @@
 #!/bin/bash -x
 
-# include br_netfilter module
-modprobe br_netfilter
+setenforce 0
+sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
 
-# allow K8s to manipulate iptables
+modprobe br_netfilter
 echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
 
-# exclude RAM swap
-# best practices to avoid false RAM stats
-swapoff -a
+yum install -y yum-utils device-mapper-persistent-data lvm2
 
-# docker GPG keys
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor --yes -o /usr/share/keyrings/docker-archive-keyring.gpg
+yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+yum install -y docker-ce
 
-# add docker repo
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sed -i '/^ExecStart/ s/$/ --exec-opt native.cgroupdriver=systemd/' /usr/lib/systemd/system/docker.service
+systemctl daemon-reload
+systemctl enable docker --now
 
-# install docker
-sudo apt-get update; sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+cat << EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=0
+repo_gpgcheck=0
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+  https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
 
-# install kubectl via apt-get
-apt-get update && apt-get install -y apt-transport-https
-curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list
-apt-get update
-apt-get install -y kubeadm kubelet kubectl
-apt-mark hold kubeadm kubelet kubectl
+yum install -y kubelet kubeadm kubectl
 systemctl enable kubelet
 
-# network cidr init
 kubeadm init --pod-network-cidr=10.244.0.0/16
+echo '==========Probably errors ignore --ignore-preflight-errors=FileAvailable--etc-kubernetes-kubelet.conf,Port-,FileAvailable--etc-kubernetes-pki-ca.crt'
+echo '''
+exit sudo
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+'''
