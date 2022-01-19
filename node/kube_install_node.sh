@@ -28,3 +28,5 @@ EOF
 
 yum install -y kubelet kubeadm kubectl
 systemctl enable kubelet
+
+echo '=======Enter kubeadm join on master'
