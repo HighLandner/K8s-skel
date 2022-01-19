@@ -1,29 +1,30 @@
 #!/bin/bash -x
 
-# include br_netfilter module
-modprobe br_netfilter
+setenforce 0
+sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
 
-# allow K8s to manipulate iptables
+modprobe br_netfilter
 echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
 
-# exclude memory swap
-# best practices to avoid false RAM stats
-swapoff -a
+yum install -y yum-utils device-mapper-persistent-data lvm2
 
-# docker GPG keys
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+yum install -y docker-ce
 
-# add docker repo
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sed -i '/^ExecStart/ s/$/ --exec-opt native.cgroupdriver=systemd/' /usr/lib/systemd/system/docker.service
+systemctl daemon-reload
+systemctl enable docker --now
 
-# install docker
-sudo apt-get update; sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+cat << EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=0
+repo_gpgcheck=0
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+  https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
 
-# install kubectl via apt-get
-curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
-apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
-apt-get install -y kubeadm kubelet kubectl
-apt-mark hold kubeadm kubelet kubectl
+yum install -y kubelet kubeadm kubectl
 systemctl enable kubelet
